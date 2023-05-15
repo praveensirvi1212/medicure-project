@@ -18,13 +18,13 @@ resource "aws_eks_node_group" "nodes_general" {
   # Configuration block with scaling settings
   scaling_config {
     # Desired number of worker nodes.
-    desired_size = 1
+    desired_size = 2
 
     # Maximum number of worker nodes.
-    max_size = 1
+    max_size = 2
 
     # Minimum number of worker nodes.
-    min_size = 1
+    min_size = 2
   }
 
   # Type of Amazon Machine Image (AMI) associated with the EKS Node Group.
@@ -42,7 +42,7 @@ resource "aws_eks_node_group" "nodes_general" {
   force_update_version = false
 
   # List of instance types associated with the EKS Node Group
-  instance_types = ["t3.small"]
+  instance_types = ["t2.micro"]
 
   # Kubernetes version
   version = "1.24"
