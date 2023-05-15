@@ -1,5 +1,5 @@
 variable "eks_cluster_name" {
-     default  =  "demo-eks"
+     default  =  "EKS-cluster"
 }
 
 variable "subnet_ids" {
