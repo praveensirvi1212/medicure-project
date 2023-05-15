@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: medicure-deployment
+  name: medicure-test-deployment
   namespace: test
   labels:
-    app: medicure-app
+    app: medicure-test-app
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: medicure-app
+      app: medicure-test-app
   template:
     metadata:
       labels:
-        app: medicure-app
+        app: medicure-test-app
     spec:
       containers:
-      - name: medicure-app
+      - name: medicure-test-app
         image: praveensirvi/medicure:v1
         imagePullPolicy: IfNotPresent
         ports:
@@ -26,11 +26,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: medicure-service
+  name: medicure-test-service
   namespace: test
 spec:
   selector:
-    app: medicure-app
+    app: medicure-test-app
   type: NodePort
   ports:
   - name: http
