@@ -1,15 +1,13 @@
-
-pipeline{
-
+pipeline {
     agent any
-
+    
     parameters{
 
         choice(name: 'action', choices: 'create\ndelete', description: 'Choose create/Destroy')
-        string(name: 'aws_account_id', description: " AWS Account ID", defaultValue: '496157679619')
-        string(name: 'Region', description: "Region of ECR", defaultValue: 'us-east-1')
-        string(name: 'ECR_REPO_NAME', description: "name of the ECR", defaultValue: 'vikashashoke')
-        string(name: 'cluster', description: "name of the EKS Cluster", defaultValue: 'demo-cluster1')
+        
+    }
+    tools { 
+        maven 'maven-3.8.6' 
     }
     environment{
 
@@ -17,102 +15,31 @@ pipeline{
         SECRET_KEY = credentials('AWS_SECRET_KEY_ID')
     }
 
-    stages{
-         
-        stage('Git Checkout'){
-                    when { expression {  params.action == 'create' } }
-            steps{
-            gitCheckout(
-                branch: "main",
-                url: "https://github.com/vikash-kumar01/mrdevops_java_app.git"
-            )
+    stages {
+        stage('Checkout git') {
+            steps {
+              git 'https://github.com/praveensirvi1212/medicure-project.git'
             }
         }
-    //      stage('Unit Test maven'){
-         
-    //      when { expression {  params.action == 'create' } }
-
-    //         steps{
-    //            script{
-                   
-    //                mvnTest()
-    //            }
-    //         }
-    //     }
-    //      stage('Integration Test maven'){
-    //      when { expression {  params.action == 'create' } }
-    //         steps{
-    //            script{
-                   
-    //                mvnIntegrationTest()
-    //            }
-    //         }
-    //     }
-    //     stage('Static code analysis: Sonarqube'){
-    //      when { expression {  params.action == 'create' } }
-    //         steps{
-    //            script{
-                   
-    //                def SonarQubecredentialsId = 'sonarqube-api'
-    //                statiCodeAnalysis(SonarQubecredentialsId)
-    //            }
-    //         }
-    //     }
-    //     stage('Quality Gate Status Check : Sonarqube'){
-    //      when { expression {  params.action == 'create' } }
-    //         steps{
-    //            script{
-                   
-    //                def SonarQubecredentialsId = 'sonarqube-api'
-    //                QualityGateStatus(SonarQubecredentialsId)
-    //            }
-    //         }
-    //     }
-    //     stage('Maven Build : maven'){
-    //      when { expression {  params.action == 'create' } }
-    //         steps{
-    //            script{
-                   
-    //                mvnBuild()
-    //            }
-    //         }
-    //     }
-    //     stage('Docker Image Build : ECR'){
-    //      when { expression {  params.action == 'create' } }
-    //         steps{
-    //            script{
-                   
-    //                dockerBuild("${params.aws_account_id}","${params.Region}","${params.ECR_REPO_NAME}")
-    //            }
-    //         }
-    //     }
-    // stage('Docker Image Scan: trivy '){
-    //      when { expression {  params.action == 'create' } }
-    //         steps{
-    //            script{
-                   
-    //                dockerImageScan("${params.aws_account_id}","${params.Region}","${params.ECR_REPO_NAME}")
-    //            }
-    //         }
-    //     }
-    //     stage('Docker Image Push : ECR '){
-    //      when { expression {  params.action == 'create' } }
-    //         steps{
-    //            script{
-                   
-    //                dockerImagePush("${params.aws_account_id}","${params.Region}","${params.ECR_REPO_NAME}")
-    //            }
-    //         }
-    //     }   
-    //     stage('Docker Image Cleanup : ECR '){
-    //      when { expression {  params.action == 'create' } }
-    //         steps{
-    //            script{
-                   
-    //                dockerImageCleanup("${params.aws_account_id}","${params.Region}","${params.ECR_REPO_NAME}")
-    //            }
-    //         }
-    //     } 
+        
+        stage ('Build & JUnit Test') {
+            steps {
+                sh 'mvn clean package' 
+            }
+        }
+        
+        stage ('Docker Build and push') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'docker-cred', passwordVariable: 'password', usernameVariable: 'username')]) {
+                    
+                    sh 'docker build -t praveensirvi/medicure:v1 .'
+                    sh "docker login -u ${username} -p ${password} "
+                    sh 'docker push praveensirvi/medicure:v1'
+                    
+                    
+                }
+            }
+        }
         stage('Create EKS Cluster : Terraform'){
             when { expression {  params.action == 'create' } }
             steps{
@@ -122,13 +49,14 @@ pipeline{
                       sh """
                           
                           terraform init 
-                          terraform plan -var 'access_key=$ACCESS_KEY' -var 'secret_key=$SECRET_KEY' -var 'region=${params.Region}' --var-file=./config/terraform.tfvars
-                          terraform apply -var 'access_key=$ACCESS_KEY' -var 'secret_key=$SECRET_KEY' -var 'region=${params.Region}' --var-file=./config/terraform.tfvars --auto-approve
+                          terraform plan -var 'access_key=$ACCESS_KEY' -var 'secret_key=$SECRET_KEY'  --var-file=./config/terraform.tfvars
+                          terraform apply -var 'access_key=$ACCESS_KEY' -var 'secret_key=$SECRET_KEY'  --var-file=./config/terraform.tfvars --auto-approve
                       """
                   }
                 }
             }
         }
+        
         stage('Connect to EKS '){
             when { expression {  params.action == 'create' } }
         steps{
@@ -138,13 +66,14 @@ pipeline{
                 sh """
                 aws configure set aws_access_key_id "$ACCESS_KEY"
                 aws configure set aws_secret_access_key "$SECRET_KEY"
-                aws configure set region "${params.Region}"
-                aws eks --region ${params.Region} update-kubeconfig --name ${params.cluster}
+                aws configure set region ap-south-1
+                aws eks --region ap-south-1 update-kubeconfig --name EKS-cluster
                 """
             }
         }
-        } 
-        stage('Deployment on EKS Cluster'){
+        }
+        
+        stage('Deployment on test-EKS Cluster'){
             when { expression {  params.action == 'create' } }
             steps{
                 script{
@@ -152,7 +81,7 @@ pipeline{
                   def apply = false
 
                   try{
-                    input message: 'please confirm to deploy on eks', ok: 'Ready to apply the config ?'
+                    input message: 'please confirm to deploy on test-eks cluster', ok: 'Ready to apply the config ?'
                     apply = true
                   }catch(err){
                     apply= false
@@ -161,11 +90,56 @@ pipeline{
                   if(apply){
 
                     sh """
-                      kubectl apply -f ..
+                      kubectl apply -f test-cluster-deployment.yaml
                     """
                   }
                 }
             }
-        }    
+        } 
+        
+        
+        stage ("wait_for_application to come up"){
+            steps {
+              sh 'sleep 40'
+            }
+        }
+        
+        stage('Selenium test cases') {
+            steps {
+              sh 'java -jar Selenium.jar'
+            }
+        }
+
+        stage('publish reports'){
+            steps {
+            
+                publishHTML([allowMissing: false, alwaysLinkToLastBuild: false, includes: 'screenshot.png', keepAll: false, reportDir: '/var/lib/jenkins/workspace/medicure-pipeline', reportFiles: 'index.html', reportName: 'HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+            }
+        }
+        
+        stage('Deployment on Prod-EKS Cluster'){
+            when { expression {  params.action == 'create' } }
+            steps{
+                script{
+                  
+                  def apply = false
+
+                  try{
+                    input message: 'please confirm to deploy on prod-eks-cluster', ok: 'Ready to apply the config ?'
+                    apply = true
+                  }catch(err){
+                    apply= false
+                    currentBuild.result  = 'UNSTABLE'
+                  }
+                  if(apply){
+
+                    sh """
+                      kubectl apply -f prod-cluster-deployment.yaml
+                    """
+                  }
+                }
+            }
+        } 
+
     }
 }
