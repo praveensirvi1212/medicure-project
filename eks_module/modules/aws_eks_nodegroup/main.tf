@@ -43,6 +43,7 @@ resource "aws_eks_node_group" "nodes_general" {
 
   # List of instance types associated with the EKS Node Group
   instance_types = ["t2.micro"]
+  ami_id = "ami-02eb7a4783e7e9317"
 
   # Kubernetes version
   version = "1.24"

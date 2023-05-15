@@ -27,6 +27,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: medicure-service
+  namespace: prod
 spec:
   selector:
     app: medicure-app
