@@ -4,4 +4,4 @@ An end to end CI-CD projects implemented to build, containerze, deploy the app t
 
 
 
-![]([[https://github.com/praveensirvi1212/medicure-project/blob/master/images/Screenshot%20from%202023-05-15%2023-41-04.png]])
+![](https://github.com/praveensirvi1212/medicure-project/blob/master/images/Screenshot%20from%202023-05-15%2023-41-04.png)
